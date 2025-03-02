@@ -54,35 +54,3 @@ final class HandleRequest implements Runnable {
       tg.destroy();
     }
   }
-  This implementation contains a time-of-check, time-of-use (TOCTOU) vulnerability because it obtains the count and enumerates the list without ensuring atomicity. If one or more new requests were to occur after the call to activeCount() and before the call to enumerate() in the main() method, the total number of threads in the group would increase, but the enumerated list ta would contain only the initial number, that is, two thread references: main and controller. Consequently, the program would fail to account for the newly started threads in the Chief thread group.
-  
-  Any subsequent use of the ta array would be insecure. For example, calling the destroy() method to destroy the thread group and its subgroups would not work as expected. The precondition to calling destroy() is that the thread group must be empty with no executing threads. The code attempts to comply with the precondition by interrupting every thread in the thread group. However, the thread group would not be empty when the destroy() method was called, causing a java.lang.IllegalThreadStateException to be thrown.
-  
-  
-  
-  Compliant Solution
-  This compliant solution uses a fixed thread pool rather than a ThreadGroup to group its three tasks. The java.util.concurrent.ExecutorService interface provides methods to manage the thread pool. Although the interface lacks methods for finding the number of actively executing threads or for enumerating the threads, the logical grouping can help control the behavior of the group as a whole. For instance, invoking the shutdownPool() method terminates all threads belonging to a particular thread pool.
-  
-  public final class NetworkHandler {
-    private final ExecutorService executor;
-   
-    NetworkHandler(int poolSize) {
-      this.executor = Executors.newFixedThreadPool(poolSize);
-    }
-   
-    public void startThreads() {
-      for (int i = 0; i < 3; i++) {
-        executor.execute(new HandleRequest());
-      }
-    }
-   
-    public void shutdownPool() {
-      executor.shutdown();
-    }
-   
-    public static void main(String[] args)  {
-      NetworkHandler nh = new NetworkHandler(3);
-      nh.startThreads();
-      nh.shutdownPool();
-    }
-  }
